@@ -1,5 +1,5 @@
 local discordia = require("discordia")
-local client = discordia.Client
+local client = discordia.Client()
 local token = require("../token")
 
 
