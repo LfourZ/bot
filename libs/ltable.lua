@@ -1,4 +1,5 @@
 local M = {}
+local json = require("./json")
 
 local function randomTableElement(Table)
 	return Table[math.random(1, #Table)]
@@ -79,5 +80,50 @@ local function printTableData(Table)
 	end
 end
 M.printTableData = printTableData
+
+local function lstring(Val)
+	local kind = type(Val)
+	if kind == "string" then
+		return Val
+	elseif kind == "number" then
+		return tostring(Val)
+	else
+		return nil
+	end
+end
+
+--[[
+local function printTable(Table)
+	local spacing = 20
+	local str = ""
+	for k, v in pairs(Table) do
+		local key = lstring(k)
+		local start = key..string.rep(" ", spacing - key:len())
+		if type(v) == "string" then
+			str = str..start..v.."\n"
+		elseif type(v) == "number" then
+			str = str..start..tostring(v).."\n"
+		elseif type(v) == "boolean" then
+			str = str..start..tostring(v).."\n"
+		elseif type(v) == "table" then
+			for kr, vr in pairs(v) dov
+				local keyr = lstring(kr)
+				local tblstr = ""
+				if type(vr) == "string"
+
+--]]
+
+
+
+
+local function tableJson(Table)
+	local str = "```json\n"..json.encode(Table, { indent = true }).."\n```"
+	if str:len() > 2000 then
+		return "`String too long.`"
+	else
+		return str
+	end
+end
+M.tableJson = tableJson
 
 return M
