@@ -1,7 +1,9 @@
 local random = math.random
 local insert, remove, sort = table.insert, table.remove, table.sort
-local format, gmatch = string.format, string.gmatch
-local min, max, floor = math.min, math.max, math.floor
+local gmatch, match, byte = string.gmatch, string.match, string.byte
+local format, rep, find = string.format, string.rep, string.find
+local min, max = math.min, math.max
+local ceil, floor = math.ceil, math.floor
 
 -- globals --
 
@@ -37,6 +39,14 @@ function table.reverse(tbl)
 	for i = 1, #tbl do
 		insert(tbl, i, remove(tbl))
 	end
+end
+
+function table.reversed(tbl)
+	local ret = {}
+	for i = #tbl, 1, -1 do
+		insert(ret, tbl[i])
+	end
+	return ret
 end
 
 function table.copy(tbl)
@@ -95,26 +105,109 @@ function table.randompair(tbl)
 end
 
 function table.sorted(tbl, fn)
-	sort(tbl, fn)
-	return tbl
+	local ret = {}
+	for i, v in ipairs(tbl) do
+		ret[i] = v
+	end
+	sort(ret, fn)
+	return ret
+end
+
+function table.transposed(tbl)
+	local ret = {}
+	for _, row in ipairs(tbl) do
+		for i, element in ipairs(row) do
+			local column = ret[i] or {}
+			insert(column, element)
+			ret[i] = column
+		end
+	end
+	return ret
+end
+
+function table.slice(tbl, start, stop, step)
+	local ret = {}
+	for i = start or 1, stop or #tbl, step or 1 do
+		insert(ret, tbl[i])
+	end
+	return ret
 end
 
 -- string --
 
 function string.split(str, delim)
-	local words = {}
-	for word in gmatch(str .. delim, '(.-)' .. delim) do
-		insert(words, word)
+	if delim and delim ~= '' then
+		local words = {}
+		for word in gmatch(str .. delim, '(.-)' .. delim) do
+			insert(words, word)
+		end
+		return words
+	else
+		local chars = {}
+		for char in gmatch(str, '.') do
+			insert(chars, char)
+		end
+		return chars
 	end
-	return words
 end
 
-function string.totable(str)
-	local chars = {}
-	for char in gmatch(str, '.') do
-		insert(chars, char)
+function string.trim(str)
+	return match(str, '^%s*(.-)%s*$')
+end
+
+function string.padleft(str, len)
+	return rep(' ', len - #str) .. str
+end
+
+function string.padright(str, len)
+	return str .. rep(' ', len - #str)
+end
+
+function string.padcenter(str, len)
+	local pad = 0.5 * (len - #str)
+	return rep(' ', floor(pad)) .. str .. rep(' ', ceil(pad))
+end
+
+function string.startswith(str, pattern, plain)
+	local start = 1
+	return find(str, pattern, start, plain) == start
+end
+
+function string.endswith(str, pattern, plain)
+	local start = #str - #pattern + 1
+	return find(str, pattern, start, plain) == start
+end
+
+function string.levenshtein(str1, str2)
+
+	if str1 == str2 then return 0 end
+
+	local len1 = #str1
+	local len2 = #str2
+
+	if len1 == 0 then
+		return len2
+	elseif len2 == 0 then
+		return len1
 	end
-	return chars
+
+	local matrix = {}
+	for i = 0, len1 do
+		matrix[i] = {[0] = i}
+	end
+	for j = 0, len2 do
+		matrix[0][j] = j
+	end
+
+	for i = 1, len1 do
+		for j = 1, len2 do
+			local cost = byte(str1, i) == byte(str2, j) and 0 or 1
+  			matrix[i][j] = min(matrix[i-1][j] + 1, matrix[i][j-1] + 1, matrix[i-1][j-1] + cost)
+		end
+	end
+
+	return matrix[len1][len2]
+
 end
 
 -- math --

@@ -102,6 +102,7 @@ local function saveConnection(connection)
 end
 
 local function request(method, url, headers, body)
+  if not url then return end
   local uri = parseUrl(url)
   local connection = getConnection(uri.hostname, uri.port, uri.tls)
   local read = connection.read

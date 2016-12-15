@@ -1,5 +1,6 @@
 local Snowflake = require('../Snowflake')
 local Role = require('./Role')
+local Emoji = require('./Emoji')
 local Member = require('./Member')
 local GuildTextChannel = require('./channels/GuildTextChannel')
 local GuildVoiceChannel = require('./channels/GuildVoiceChannel')
@@ -17,6 +18,7 @@ Guild.__description = "Represents a Discord guild (also known as a server)."
 function Guild:__init(data, parent)
 	Snowflake.__init(self, data, parent)
 	self._roles = Cache({}, Role, 'id', self)
+	self._emojis = Cache({}, Emoji, 'id', self)
 	self._members = Cache({}, Member, 'id', self)
 	self._text_channels = Cache({}, GuildTextChannel, 'id', self)
 	self._voice_channels = Cache({}, GuildVoiceChannel, 'id', self)
@@ -36,6 +38,7 @@ function Guild:_makeAvailable(data)
 	self:_update(data)
 
 	self._roles:merge(data.roles)
+	self._emojis:merge(data.emojis)
 	self._members:merge(data.members)
 
 	hash(data.voice_states, 'session_id')
@@ -47,9 +50,10 @@ function Guild:_makeAvailable(data)
 
 	if data.channels then
 		for _, channel_data in ipairs(data.channels) do
-			if channel_data.type == 'text' then
+			local type = channel_data.type
+			if type == 'text' then
 				self._text_channels:new(channel_data)
-			elseif channel_data.type == 'voice' then
+			elseif type == 'voice' then
 				self._voice_channels:new(channel_data)
 			end
 		end
@@ -169,22 +173,28 @@ local function getBannedUsers(self)
 	local success, data = self._parent._api:getGuildBans(self._id)
 	if not success then return function() end end
 	local users = self._parent._users
-	return wrap(function()
-		for _, v in ipairs(data) do
-			yield(users:get(v.user.id) or users:new(v.user))
+	local i = 1
+	return function()
+		local v = data[i]
+		if v then
+			i = i + 1
+			return users:get(v.user.id) or users:new(v.user)
 		end
-	end)
+	end
 end
 
 local function getInvites(self)
 	local success, data = self._parent._api:getGuildInvites(self._id)
 	local parent = self._parent
 	if not success then return function() end end
-	return wrap(function()
-		for _, invite_data in ipairs(data) do
-			yield(Invite(invite_data, parent))
+	local i = 1
+	return function()
+		local v = data[i]
+		if v then
+			i = i + 1
+			return Invite(v, parent)
 		end
-	end)
+	end
 end
 
 local function banUser(self, user, days)
@@ -225,13 +235,6 @@ end
 local function createRole(self)
 	local success, data = self._parent._api:createGuildRole(self._id)
 	if success then return self._roles:new(data) end
-end
-
-local function getMemberById(self, id)
-	local member = self._members:get(id)
-	if member then return member end
-	local success, data = self._parent._api:getGuildMember(self._id, id)
-	if success then return self._members:new(data) end
 end
 
 -- channels --
@@ -336,6 +339,28 @@ local function findRoles(self, predicate)
 	return self._roles:findAll(predicate)
 end
 
+-- emojis --
+
+local function getEmojiCount(self)
+	return self._emojis._count
+end
+
+local function getEmojis(self, key, value)
+	return self._emojis:getAll(key, value)
+end
+
+local function getEmoji(self, key, value)
+	return self._emojis:get(key, value)
+end
+
+local function findEmoji(self, predicate)
+	return self._emojis:find(predicate)
+end
+
+local function findEmojis(self, predicate)
+	return self._emojis:findAll(predicate)
+end
+
 -- members --
 
 local function getMemberCount(self)
@@ -347,7 +372,10 @@ local function getMembers(self, key, value)
 end
 
 local function getMember(self, key, value)
-	return self._members:get(key, value)
+	local member = self._members:get(key, value)
+	if member or value then return member end
+	local success, data = self._parent._api:getGuildMember(self._id, key)
+	if success then return self._members:new(data) end
 end
 
 local function findMember(self, predicate)
@@ -435,12 +463,12 @@ method('pruneMembers', pruneMembers, '[days]', "Removes members who have not bee
 method('createTextChannel', createTextChannel, 'name', "Creates a new text channel in the guild.")
 method('createVoiceChannel', createVoiceChannel, 'name', "Creates a new voice channel in the guild.")
 method('createRole', createRole, nil, "Creates a new role in the guild.")
-method('getMemberById', getMemberById, 'id', "Returns a member from the guild cache or from Discord if it is not cached.")
 
 cache('Channel', getChannelCount, getChannel, getChannels, findChannel, findChannels)
 cache('TextChannel', getTextChannelCount, getTextChannel, getTextChannels, findTextChannel, findTextChannels)
 cache('VoiceChannel', getVoiceChannelCount, getVoiceChannel, getVoiceChannels, findVoiceChannel, findVoiceChannels)
 cache('Role', getRoleCount, getRole, getRoles, findRole, findRoles)
+cache('Emoji', getEmojiCount, getEmoji, getEmojis, findEmoji, findEmojis)
 cache('Member', getMemberCount, getMember, getMembers, findMember, findMembers)
 cache('Message', getMessageCount, getMessage, getMessages, findMessage, findMessages)
 
