@@ -97,7 +97,6 @@ client:on("messageCreate", function(message)
 	if message.author == client.user then return end
 	local cmd, arg = string.match(message.content, "(%S+) (.*)")
 	cmd = cmd or message.content
-	if message.author.id ~= message.guild.owner.id then return end
 
 	if cmd == "!levels" then
 		if not arg then return end
@@ -111,6 +110,7 @@ client:on("messageCreate", function(message)
 		prt = prt.."```"
 		message.channel:sendMessage(prt)
 	elseif cmd == "!debug" then
+		if not arg then return end
 		local items = searchItem(arg)
 		local titems = tablelen(items)
 		if titems == 0 then
@@ -127,6 +127,7 @@ client:on("messageCreate", function(message)
 	elseif cmd == "!ge" then
 		local items = searchItem(arg)
 		local titems = tablelen(items)
+		if not arg then return end
 		if titems == 0 then
 			message.channel:sendMessage(string.format("```\nItem '%s' was not found or is not tradeable.```", arg))
 		elseif titems == 1 then
